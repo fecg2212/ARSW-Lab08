@@ -4,15 +4,15 @@ Servidor Node.js con Express y Socket.IO para gestionar blueprints y colaboracio
 
 ## Equipo
 
-- Integrante 1: <Cristian Silva>
-- Integrante 2: <David Salamanca>
-- Integrante 3: <Felipe Calvache>
-- Integrante 3: <Juan miguel Rojas>
+- Cristian Silva
+- David Salamanca
+- Felipe Calvache
+- Juan miguel Rojas
 
-## video
-[![Ver demo en YouTube](https://img.youtube.com/vi/sZP2SkwPQmA/maxresdefault.jpg)](https://youtu.be/sZP2SkwPQmA)
 
-[Ver video](https://youtu.be/sZP2SkwPQmA)
+## Video
+[![Ver demo en YouTube](https://img.youtube.com/vi/J0TTSaxKyDs/0.jpg)](https://youtu.be/J0TTSaxKyDs)
+
 
 ## Setup
 
