@@ -45,7 +45,14 @@ jobs:
         with:
           terraform_version: 1.6.0
 
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate (sin backend)
+        run: terraform init -backend=false && terraform validate
+
       - name: Azure Login (OIDC)
+        if: env.ARM_CLIENT_ID != ''
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -53,27 +60,24 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Terraform Init
+        if: env.ARM_CLIENT_ID != ''
         run: terraform init -backend-config=backend.hcl
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Validate
-        run: terraform validate
-
       - name: Terraform Plan
+        if: env.ARM_CLIENT_ID != ''
         run: terraform plan -var-file=env/dev.tfvars -out=plan.tfplan
 
       - name: Upload Plan
+        if: env.ARM_CLIENT_ID != ''
         uses: actions/upload-artifact@v4
         with:
           name: terraform-plan
           path: infra/plan.tfplan
 
       - name: Terraform Apply
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && env.ARM_CLIENT_ID != ''
         run: terraform apply -auto-approve "plan.tfplan"
 
       - name: Terraform Destroy
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy'
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && env.ARM_CLIENT_ID != ''
         run: terraform destroy -auto-approve -var-file=env/dev.tfvars
