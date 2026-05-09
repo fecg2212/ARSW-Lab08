@@ -1,0 +1,10 @@
+#cloud-config
+package_update: true
+packages:
+  - nginx
+  - nodejs
+  - npm
+runcmd:
+  - echo "Hola desde $(hostname)" > /var/www/html/index.nginx-debian.html
+  - systemctl enable nginx
+  - systemctl restart nginx

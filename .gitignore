@@ -1,0 +1,9 @@
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfplan
+plan.tfplan
+backend.hcl
+**/.terraform.lock.hcl
+*.pem
+*.key

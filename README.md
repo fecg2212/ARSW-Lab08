@@ -1,52 +1,207 @@
-# README del equipo - Blueprints RT
+# Blueprints RT - Aplicación de Colaboración en Tiempo Real
 
-Servidor Node.js con Express y Socket.IO para gestionar blueprints y colaboracion en tiempo real por sala.
+## ¿QUÉ ES?
 
-## Equipo
+Una aplicación web **fullstack de colaboración en tiempo real** que permite a múltiples usuarios dibujar "blueprints" (planos) simultáneamente en salas compartidas. Es similar a un tablero colaborativo o Google Docs pero para dibujo técnico.
+
+## EQUIPO
 
 - Cristian Silva
 - David Salamanca
 - Felipe Calvache
-- Juan miguel Rojas
+- Juan Miguel Rojas
 
+---
 
-## Video
-[![Ver demo en YouTube](https://img.youtube.com/vi/J0TTSaxKyDs/0.jpg)](https://youtu.be/J0TTSaxKyDs)
+## ESTRUCTURA DEL PROYECTO
 
+```
+lab07/
+├── back/                          # Backend (Node.js)
+│   ├── package.json              # Dependencias del servidor
+│   └── src/
+│       ├── index.js              # Punto de entrada, configura Express + Socket.IO
+│       ├── routes/
+│       │   └── blueprints.routes.js  # API REST (CRUD de blueprints)
+│       ├── sockets/
+│       │   └── blueprints.socket.js  # Eventos WebSocket (dibujo en tiempo real)
+│       ├── store/
+│       │   └── blueprints.store.js   # Base de datos en memoria (Map)
+│       └── validation/
+│           └── schemas.js        # Validación de datos (Zod)
+│
+└── front/                         # Frontend (React + Vite)
+    ├── package.json              # Dependencias del cliente
+    ├── vite.config.js            # Configuración del bundler
+    └── src/
+        ├── App.jsx               # Componente principal (UI e lógica)
+        ├── main.jsx              # Punto de entrada
+        └── lib/
+            ├── socketIoClient.js # Cliente WebSocket
+            └── stompClient.js    # Cliente STOMP alternativo
+```
 
-## Setup
+---
+
+## TECNOLOGÍAS USADAS
+
+### Backend
+- **Express**: Framework web
+- **Socket.IO**: WebSockets para comunicación bidireccional en tiempo real
+- **Zod**: Validación de esquemas (data validation)
+- **Nodemon**: Recarga automática durante desarrollo
+
+### Frontend
+- **React 18**: Framework UI
+- **Vite**: Bundler y dev server ultrarrápido
+- **Socket.IO Client**: Cliente para conectarse al servidor WebSocket
+- **STOMP Client**: Protocolo alternativo de mensajería
+
+---
+
+## ¿QUÉ HACE?
+
+### Funcionalidades Principales
+
+#### 1. CRUD de Blueprints (API REST)
+- `GET /api/blueprints?author=juan` → Lista todos los planos de un autor
+- `GET /api/users/:author/points` → Obtiene puntos totales y cantidad de planos
+- `POST /api/blueprints` → Crea un nuevo plano
+- `PUT /api/blueprints/:author/:name` → Actualiza un plano
+- `DELETE /api/blueprints/:author/:name` → Elimina un plano
+
+#### 2. Dibujo Colaborativo en Tiempo Real (WebSockets)
+- Los usuarios se unen a **salas** (rooms) específicas: `blueprints.{author}.{name}`
+- Cuando alguien dibuja un punto, se envía a todos en esa sala **instantáneamente**
+- El canvas se actualiza en vivo en todos los clientes
+
+#### 3. Sistema de Salas (Rooms)
+- Sala de autor: `author.{author}` → Notificaciones de cambios de puntos
+- Sala de blueprint: `blueprints.{author}.{name}` → Dibujo colaborativo
+
+#### 4. Estadísticas en Tiempo Real
+- Cada autor ve su cantidad total de puntos dibujados
+- Cada autor ve su cantidad total de blueprints creados
+
+---
+
+## FLUJO DE DATOS
+
+### Flujo de Dibujo (Colaborativo)
+```
+Usuario A dibuja → Cliente A emite "draw-event" (x,y) → 
+Socket.IO → Backend recibe → Valida con Zod → 
+Almacena en Store → Emite "blueprint-update" a todos en la sala → 
+Usuario A, B, C reciben actualización → Canvas se redibuja
+```
+
+### Flujo de Estadísticas
+```
+Se dibuja un punto → Backend calcula totales → 
+Emite "user-points-update" a sala del autor → 
+Frontend actualiza UI con nuevos números
+```
+
+---
+
+## CÓMO EJECUTAR EL PROYECTO
 
 ### Requisitos
-
 - Node.js 18+
 - npm
 
-### Instalacion
+### Instalación y Ejecución
 
+**Terminal 1 - Backend:**
 ```bash
+cd back
 npm install
-```
-
-### Ejecucion
-
-```bash
 npm run dev
+# Servidor en http://localhost:3001
 ```
 
-Servidor por defecto en `http://localhost:3001`.
+**Terminal 2 - Frontend:**
+```bash
+cd front
+npm install
+npm run dev
+# Cliente en http://localhost:5173
+```
 
-### Variables de entorno
+### Endpoints de Health Check
+- `GET http://localhost:3001/health` → Status completo del servidor
+- `GET http://localhost:3001/health/live` → Verificación de disponibilidad
 
-- `PORT`: puerto del servidor (default: `3001`)
-- `NODE_ENV`: `development` o `production`
-- `FRONTEND_ORIGIN`: origen permitido en produccion para Socket.IO (default: `http://localhost:5173/`)
+---
 
-## Endpoints usados
+## VARIABLES DE ENTORNO
 
-### Health checks
+### Backend (`back/.env` o variables del sistema)
+```
+PORT=3001
+NODE_ENV=development
+FRONTEND_ORIGIN=http://localhost:5173
+```
 
-- `GET /health`
-- `GET /health/live`
+### Frontend (`front/.env`)
+```
+VITE_API_BASE=http://localhost:3001
+VITE_IO_BASE=http://localhost:3001
+VITE_STOMP_BASE=http://localhost:3001
+```
+
+---
+
+## ALMACENAMIENTO
+
+- **Almacenamiento en memoria** (Map de JavaScript)
+- Los datos **se pierden** cuando el servidor se reinicia
+- Estructura de datos:
+```javascript
+{
+  "author:name": {
+    author: "juan",
+    name: "plano-1",
+    points: [
+      { x: 100, y: 200 },
+      { x: 110, y: 210 },
+      ...
+    ]
+  }
+}
+```
+
+---
+
+## FLUJO DE USO (Usuario Final)
+
+1. **Usuario abre el navegador** → Accede a http://localhost:5173
+2. **Selecciona autor y nombre de plano**
+3. **Carga plano existente o crea uno nuevo**
+4. **Se une automáticamente a salas WebSocket**
+5. **Dibuja en el canvas** → Puntos se sincronizan en tiempo real
+6. **Otros usuarios ven el dibujo actualizado** instantáneamente
+7. **Estadísticas se actualizan** en tiempo real
+
+---
+
+## DETALLES TÉCNICOS IMPORTANTES
+
+| Aspecto | Detalle |
+|---------|---------|
+| **Protocolo de Comunicación** | HTTP (REST) + WebSocket (Socket.IO) |
+| **Validación** | Zod (backend) |
+| **CORS** | Configurado para `localhost:5173` en dev |
+| **Persistencia** | En memoria (ephemeral) |
+| **Escalabilidad** | No soporta múltiples instancias (sin Redis) |
+| **Autenticación** | No implementada (usa `author` como identificador) |
+| **Concurrencia** | Manejo de múltiples usuarios en simultáneo |
+
+---
+
+## VIDEO DEMO
+
+[![Ver demo en YouTube](https://img.youtube.com/vi/J0TTSaxKyDs/0.jpg)](https://youtu.be/J0TTSaxKyDs)
 
 ### Blueprints
 
