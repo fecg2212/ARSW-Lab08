@@ -1,5 +1,5 @@
 prefix              = "lab8"
-location            = "brazilsouth"
+location            = "canadacentral"
 vm_count            = 2
 admin_username      = "student"
 ssh_public_key      = "~/.ssh/id_rsa_lab8.pub"
