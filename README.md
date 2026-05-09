@@ -129,7 +129,7 @@ curl http://$(terraform output -raw lb_public_ip)
 
 ### Apply exitoso
 
-![alt text](image.png)
+![alt text](/assets/image.png)
 
 ```
 Apply complete! Resources: 16 added, 0 changed, 0 destroyed.
@@ -145,9 +145,9 @@ vm_names = [
 
 ### Load Balancer distribuyendo tráfico entre las 2 VMs
 
-![alt text](image-1.png)
+![alt text](/assets/image-1.png)
 
-![alt text](image-4.png)
+![alt text](/assets/image-4.png)
 
 ```bash
 $ curl http://4.204.193.185
@@ -162,9 +162,9 @@ Hola desde lab8-vm-1
 
 ### GitHub Actions — Pipeline verde
 
-![alt text](image-2.png)
+![alt text](/assets/image-2.png)
 
-![alt text](image-3.png)
+![alt text](/assets/image-3.png)
 
 ---
 
