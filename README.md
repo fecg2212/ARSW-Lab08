@@ -1,307 +1,280 @@
-# Blueprints RT - Aplicación de Colaboración en Tiempo Real
+# Lab #8 — Infraestructura como Código con Terraform (Azure)
 
-## ¿QUÉ ES?
-
-Una aplicación web **fullstack de colaboración en tiempo real** que permite a múltiples usuarios dibujar "blueprints" (planos) simultáneamente en salas compartidas. Es similar a un tablero colaborativo o Google Docs pero para dibujo técnico.
-
-## EQUIPO
-
-- Cristian Silva
-- David Salamanca
-- Felipe Calvache
-- Juan Miguel Rojas
+**Curso:** BluePrints / ARSW  
+**Equipo:** Cristian Silva · David Salamanca · Felipe Calvache · Juan Miguel Rojas  
+**Repositorio:** https://github.com/fecg2212/ARSW-Lab08
 
 ---
 
-## ESTRUCTURA DEL PROYECTO
+## Descripción
 
-```
-lab07/
-├── back/                          # Backend (Node.js)
-│   ├── package.json              # Dependencias del servidor
-│   └── src/
-│       ├── index.js              # Punto de entrada, configura Express + Socket.IO
-│       ├── routes/
-│       │   └── blueprints.routes.js  # API REST (CRUD de blueprints)
-│       ├── sockets/
-│       │   └── blueprints.socket.js  # Eventos WebSocket (dibujo en tiempo real)
-│       ├── store/
-│       │   └── blueprints.store.js   # Base de datos en memoria (Map)
-│       └── validation/
-│           └── schemas.js        # Validación de datos (Zod)
-│
-└── front/                         # Frontend (React + Vite)
-    ├── package.json              # Dependencias del cliente
-    ├── vite.config.js            # Configuración del bundler
-    └── src/
-        ├── App.jsx               # Componente principal (UI e lógica)
-        ├── main.jsx              # Punto de entrada
-        └── lib/
-            ├── socketIoClient.js # Cliente WebSocket
-            └── stompClient.js    # Cliente STOMP alternativo
-```
+Modernización del laboratorio de balanceo de carga en Azure usando **Terraform** para definir, aprovisionar y versionar la infraestructura de la aplicación **Blueprints RT** — una plataforma colaborativa de dibujo en tiempo real. Se desplegó una arquitectura de alta disponibilidad con Load Balancer L4 y 2 VMs Linux en Azure, siguiendo buenas prácticas de IaC.
 
 ---
 
-## TECNOLOGÍAS USADAS
+## Arquitectura Desplegada
 
-### Backend
-- **Express**: Framework web
-- **Socket.IO**: WebSockets para comunicación bidireccional en tiempo real
-- **Zod**: Validación de esquemas (data validation)
-- **Nodemon**: Recarga automática durante desarrollo
+| Recurso | Nombre | Descripción |
+|---|---|---|
+| Resource Group | `rg-lab8` | Contenedor de todos los recursos |
+| Virtual Network | `lab8-vnet` | Red `10.0.0.0/16` |
+| Subnet | `subnet-web` | Subred `10.0.1.0/24` para las VMs |
+| Network Security Group | `lab8-nsg-web` | Permite HTTP (80) desde Internet y SSH (22) solo desde IP del equipo |
+| Load Balancer | `lab8-lb` | LB público Standard con health probe HTTP |
+| Public IP | `lab8-lb-pip` | IP pública estática del LB |
+| VM 0 | `lab8-vm-0` | Ubuntu 22.04 LTS · Standard_B1s · nginx |
+| VM 1 | `lab8-vm-1` | Ubuntu 22.04 LTS · Standard_B1s · nginx |
+| Storage Account | `sttfstate7436` | Backend remoto del estado de Terraform |
 
-### Frontend
-- **React 18**: Framework UI
-- **Vite**: Bundler y dev server ultrarrápido
-- **Socket.IO Client**: Cliente para conectarse al servidor WebSocket
-- **STOMP Client**: Protocolo alternativo de mensajería
-
----
-
-## ¿QUÉ HACE?
-
-### Funcionalidades Principales
-
-#### 1. CRUD de Blueprints (API REST)
-- `GET /api/blueprints?author=juan` → Lista todos los planos de un autor
-- `GET /api/users/:author/points` → Obtiene puntos totales y cantidad de planos
-- `POST /api/blueprints` → Crea un nuevo plano
-- `PUT /api/blueprints/:author/:name` → Actualiza un plano
-- `DELETE /api/blueprints/:author/:name` → Elimina un plano
-
-#### 2. Dibujo Colaborativo en Tiempo Real (WebSockets)
-- Los usuarios se unen a **salas** (rooms) específicas: `blueprints.{author}.{name}`
-- Cuando alguien dibuja un punto, se envía a todos en esa sala **instantáneamente**
-- El canvas se actualiza en vivo en todos los clientes
-
-#### 3. Sistema de Salas (Rooms)
-- Sala de autor: `author.{author}` → Notificaciones de cambios de puntos
-- Sala de blueprint: `blueprints.{author}.{name}` → Dibujo colaborativo
-
-#### 4. Estadísticas en Tiempo Real
-- Cada autor ve su cantidad total de puntos dibujados
-- Cada autor ve su cantidad total de blueprints creados
+**Región de infraestructura:** `canadacentral`  
+**Región del estado remoto:** `brazilsouth`  
+**IP pública del Load Balancer:** `4.204.193.185`
 
 ---
 
-## FLUJO DE DATOS
+## Diagramas
 
-### Flujo de Dibujo (Colaborativo)
-```
-Usuario A dibuja → Cliente A emite "draw-event" (x,y) → 
-Socket.IO → Backend recibe → Valida con Zod → 
-Almacena en Store → Emite "blueprint-update" a todos en la sala → 
-Usuario A, B, C reciben actualización → Canvas se redibuja
-```
+### Diagrama de Componentes
 
-### Flujo de Estadísticas
+<!-- TODO: Insertar diagrama de componentes aquí -->
+
+### Diagrama de Secuencia
+
+<!-- TODO: Insertar diagrama de secuencia aquí -->
+
+---
+
+## Estructura del Repositorio
+
 ```
-Se dibuja un punto → Backend calcula totales → 
-Emite "user-points-update" a sala del autor → 
-Frontend actualiza UI con nuevos números
+.
+├── infra/
+│   ├── main.tf               # Orquestación de módulos
+│   ├── providers.tf          # Provider AzureRM + backend remoto
+│   ├── variables.tf          # Declaración de variables
+│   ├── outputs.tf            # Outputs: IP del LB, nombres de VMs
+│   ├── backend.hcl           # Configuración del estado remoto (sin secretos)
+│   ├── backend.hcl.example   # Plantilla del backend
+│   ├── cloud-init.yaml       # Script de arranque de las VMs (instala nginx)
+│   └── env/
+│       └── dev.tfvars        # Variables del ambiente dev
+├── modules/
+│   ├── vnet/                 # Módulo: Red virtual + NSG + Subnet
+│   ├── lb/                   # Módulo: Load Balancer + IP pública + reglas
+│   └── compute/              # Módulo: VMs + NICs + asociación al backend pool
+└── .github/
+    └── workflows/
+        └── terraform.yml     # Pipeline CI/CD con GitHub Actions
 ```
 
 ---
 
-## CÓMO EJECUTAR EL PROYECTO
+## Requisitos Previos
 
-### Requisitos
-- Node.js 18+
-- npm
+- Azure CLI (`az`) >= 2.78
+- Terraform >= 1.6
+- Cuenta Azure (Azure for Students o equivalente)
+- SSH key RSA generada (`ssh-keygen -t rsa -b 4096`)
+- Cuenta GitHub
 
-### Instalación y Ejecución
+---
 
-**Terminal 1 - Backend:**
+## Bootstrap del Backend Remoto
+
+Antes de usar Terraform, se crearon los recursos para el estado remoto:
+
 ```bash
-cd back
-npm install
-npm run dev
-# Servidor en http://localhost:3001
+LOCATION=brazilsouth
+RG=rg-tfstate-lab8
+STO=sttfstate7436
+CONTAINER=tfstate
+
+az group create -n $RG -l $LOCATION
+az storage account create -g $RG -n $STO -l $LOCATION --sku Standard_LRS --encryption-services blob
+az storage container create --name $CONTAINER --account-name $STO --auth-mode login
 ```
 
-**Terminal 2 - Frontend:**
+> **Nota:** Se usó `brazilsouth` para el estado remoto porque fue la única región disponible para Storage Accounts en la suscripción de estudiantes.
+
+---
+
+## Flujo de Trabajo Local
+
 ```bash
-cd front
-npm install
-npm run dev
-# Cliente en http://localhost:5173
-```
+cd infra
 
-### Endpoints de Health Check
-- `GET http://localhost:3001/health` → Status completo del servidor
-- `GET http://localhost:3001/health/live` → Verificación de disponibilidad
+# Autenticación
+az login
 
----
+# Inicializar con backend remoto
+terraform init -backend-config=backend.hcl
 
-## VARIABLES DE ENTORNO
+# Revisar formato y validar
+terraform fmt -recursive
+terraform validate
 
-### Backend (`back/.env` o variables del sistema)
-```
-PORT=3001
-NODE_ENV=development
-FRONTEND_ORIGIN=http://localhost:5173
-```
+# Planificar
+terraform plan -var-file=env/dev.tfvars -out plan.tfplan
 
-### Frontend (`front/.env`)
-```
-VITE_API_BASE=http://localhost:3001
-VITE_IO_BASE=http://localhost:3001
-VITE_STOMP_BASE=http://localhost:3001
+# Aplicar
+terraform apply "plan.tfplan"
+
+# Verificar el LB
+curl http://$(terraform output -raw lb_public_ip)
 ```
 
 ---
 
-## ALMACENAMIENTO
+## Evidencias del Despliegue
 
-- **Almacenamiento en memoria** (Map de JavaScript)
-- Los datos **se pierden** cuando el servidor se reinicia
-- Estructura de datos:
-```javascript
-{
-  "author:name": {
-    author: "juan",
-    name: "plano-1",
-    points: [
-      { x: 100, y: 200 },
-      { x: 110, y: 210 },
-      ...
-    ]
-  }
-}
+### Apply exitoso
+
+![alt text](image.png)
+
+```
+Apply complete! Resources: 16 added, 0 changed, 0 destroyed.
+
+Outputs:
+lb_public_ip        = "4.204.193.185"
+resource_group_name = "rg-lab8"
+vm_names = [
+  "lab8-vm-0",
+  "lab8-vm-1",
+]
+```
+
+### Load Balancer distribuyendo tráfico entre las 2 VMs
+
+![alt text](image-1.png)
+
+![alt text](image-4.png)
+
+```bash
+$ curl http://4.204.193.185
+Hola desde lab8-vm-0
+
+$ curl http://4.204.193.185
+Hola desde lab8-vm-0
+
+$ curl http://4.204.193.185
+Hola desde lab8-vm-1
+```
+
+### GitHub Actions — Pipeline verde
+
+![alt text](image-2.png)
+
+![alt text](image-3.png)
+
+---
+
+## CI/CD con GitHub Actions
+
+El pipeline `.github/workflows/terraform.yml` se ejecuta en cada `push` o `pull_request` a `main` y realiza:
+
+1. **Terraform Format Check** — valida el formato del código
+2. **Terraform Validate** — valida la sintaxis y configuración
+3. **Terraform Plan** — genera el plan (requiere credenciales OIDC)
+4. **Terraform Apply** — ejecución manual vía `workflow_dispatch`
+5. **Terraform Destroy** — destrucción manual vía `workflow_dispatch`
+
+> **Nota sobre OIDC:** La configuración completa de autenticación OIDC (federación de identidad entre GitHub y Azure mediante App Registration) requiere permisos de administrador en el tenant de Azure AD, los cuales no están disponibles en suscripciones Azure for Students. El workflow está correctamente implementado y los pasos de `fmt` y `validate` corren exitosamente en cada push.
+
+---
+
+## Variables Principales
+
+| Variable | Descripción | Valor en dev |
+|---|---|---|
+| `prefix` | Prefijo para nombres de recursos | `lab8` |
+| `location` | Región de Azure | `canadacentral` |
+| `vm_count` | Número de VMs | `2` |
+| `admin_username` | Usuario admin de las VMs | `student` |
+| `ssh_public_key` | Ruta a la llave pública RSA | `~/.ssh/id_rsa_lab8.pub` |
+| `allow_ssh_from_cidr` | IP autorizada para SSH | `X.X.X.X/32` |
+
+---
+
+## Cloud-Init de las VMs
+
+```yaml
+#cloud-config
+package_update: true
+packages:
+  - nginx
+  - nodejs
+  - npm
+runcmd:
+  - echo "Hola desde $(hostname)" > /var/www/html/index.nginx-debian.html
+  - systemctl enable nginx
+  - systemctl restart nginx
 ```
 
 ---
 
-## FLUJO DE USO (Usuario Final)
+## Reflexión Técnica
 
-1. **Usuario abre el navegador** → Accede a http://localhost:5173
-2. **Selecciona autor y nombre de plano**
-3. **Carga plano existente o crea uno nuevo**
-4. **Se une automáticamente a salas WebSocket**
-5. **Dibuja en el canvas** → Puntos se sincronizan en tiempo real
-6. **Otros usuarios ven el dibujo actualizado** instantáneamente
-7. **Estadísticas se actualizan** en tiempo real
+### Decisiones de Diseño
 
----
+**¿Por qué Load Balancer L4 y no Application Gateway L7?**  
+Se eligió el Load Balancer estándar de Azure (L4) porque la aplicación Blueprints RT usa WebSockets (Socket.IO) para comunicación en tiempo real. El LB L4 maneja conexiones TCP de forma transparente, lo que permite que los WebSockets funcionen sin configuración adicional. Un Application Gateway L7 requeriría configuración específica para WebSockets y añadiría latencia innecesaria para esta arquitectura.
 
-## DETALLES TÉCNICOS IMPORTANTES
+**Módulos de Terraform**  
+Se separó la infraestructura en tres módulos (`vnet`, `lb`, `compute`) para lograr reutilización y separación de responsabilidades. Esto permite, por ejemplo, escalar el número de VMs cambiando solo la variable `vm_count` sin tocar la red o el LB.
 
-| Aspecto | Detalle |
-|---------|---------|
-| **Protocolo de Comunicación** | HTTP (REST) + WebSocket (Socket.IO) |
-| **Validación** | Zod (backend) |
-| **CORS** | Configurado para `localhost:5173` en dev |
-| **Persistencia** | En memoria (ephemeral) |
-| **Escalabilidad** | No soporta múltiples instancias (sin Redis) |
-| **Autenticación** | No implementada (usa `author` como identificador) |
-| **Concurrencia** | Manejo de múltiples usuarios en simultáneo |
+**Estado remoto con locking**  
+El estado se almacena en Azure Blob Storage con locking automático, lo que previene modificaciones simultáneas por múltiples miembros del equipo.
 
----
+### Trade-offs
 
-## VIDEO DEMO
+| Decisión | Ventaja | Costo |
+|---|---|---|
+| LB L4 vs Application Gateway | Soporte nativo de WebSockets, menor costo | Sin path-based routing ni terminación TLS en el LB |
+| `Standard_B1s` en canadacentral | Disponible y económico | La región `brazilsouth` (más cercana) no tenía SKUs disponibles |
+| Almacenamiento en memoria en la app | Simplicidad | Las 2 VMs tienen datos independientes; sin sticky sessions, un usuario puede perder su sesión |
+| Sin IP pública en las VMs | Mayor seguridad | Acceso SSH solo posible desde el NSG con IP autorizada |
 
-[![Ver demo en YouTube](https://img.youtube.com/vi/J0TTSaxKyDs/0.jpg)](https://youtu.be/J0TTSaxKyDs)
+### Implicaciones de Seguridad
 
-### Blueprints
+- El puerto **22/TCP** está restringido solo a la IP del equipo definida en `allow_ssh_from_cidr`. En producción se reemplazaría por **Azure Bastion** para eliminar completamente la exposición de SSH.
+- Las VMs no tienen IP pública, solo el Load Balancer la expone.
+- El NSG permite solo HTTP (80) desde Internet y SSH (22) desde una IP específica.
 
-- `GET /api/blueprints?author=:author`
-  - Lista blueprints por autor e incluye `totalPoints`.
-- `GET /api/blueprints/:author/:name`
-  - Retorna un blueprint con sus puntos.
-- `POST /api/blueprints`
-  - Crea blueprint.
-  - Body:
-  ```json
-  {
-    "author": "juan",
-    "name": "plano-1",
-    "points": [{ "x": 10, "y": 10 }]
-  }
-  ```
-- `PUT /api/blueprints/:author/:name`
-  - Actualiza puntos del blueprint.
-- `DELETE /api/blueprints/:author/:name`
-  - Elimina blueprint.
+### Estimación de Costos
 
-Compatibilidad temporal:
-- `POST /api/blueprints/:author/:name` (legacy)
+| Recurso | Costo aproximado/mes |
+|---|---|
+| 2x Standard_B1s | ~$15 USD |
+| Load Balancer Standard | ~$18 USD |
+| Public IP Standard | ~$3 USD |
+| Storage Account (estado) | < $1 USD |
+| **Total estimado** | **~$37 USD/mes** |
 
-## Protocolo RT (Socket.IO)
+> Para un entorno de producción real se recomendaría usar **VM Scale Sets** con autoscaling para optimizar costos según la demanda.
 
-### Cliente -> Servidor
+### Mejoras para Producción
 
-- `join-room`
-  - payload: `blueprints.{author}.{name}`
-- `draw-event`
-  - payload:
-  ```json
-  {
-    "room": "blueprints.juan.plano-1",
-    "author": "juan",
-    "name": "plano-1",
-    "point": { "x": 123, "y": 45 }
-  }
-  ```
+1. **Persistencia de datos:** Reemplazar el store en memoria por Redis o MongoDB para que todas las VMs compartan el estado.
+2. **Autoscaling:** Migrar a VM Scale Sets con reglas de escalado según CPU/conexiones.
+3. **Observabilidad:** Agregar Azure Monitor con alertas sobre el health probe y métricas de las VMs.
+4. **TLS:** Agregar Application Gateway con certificado SSL para HTTPS.
+5. **CI/CD completo:** Configurar OIDC con una cuenta con permisos de administrador en Entra ID.
+6. **Azure Bastion:** Eliminar el acceso SSH directo.
 
-### Servidor -> Clientes
+### Destrucción Segura
 
-- `blueprint-update`
-  - Se emite a la sala correspondiente con el plano acumulado:
-  ```json
-  {
-    "author": "juan",
-    "name": "plano-1",
-    "points": [{ "x": 123, "y": 45 }]
-  }
-  ```
-- `error-event`
-  - Se emite cuando el payload es invalido o la sala no coincide.
-
-## Estructura del proyecto
-
-```text
-src/
-  index.js
-  routes/
-    blueprints.routes.js
-  sockets/
-    blueprints.socket.js
-  store/
-    blueprints.store.js
-  validation/
-    schemas.js
+```bash
+terraform destroy -var-file=env/dev.tfvars
 ```
 
-## Decisiones de diseno (rooms/topicos)
+> Verificar que todos los recursos hayan sido eliminados en el portal de Azure para evitar costos innecesarios. Los recursos están etiquetados con `expires = "2026-06-01"` para facilitar el seguimiento.
 
-- Se usa una sala por plano: `blueprints.{author}.{name}`.
-- Cualquier cliente que quiera colaborar en un plano primero emite `join-room` con ese identificador.
-- El evento `draw-event` valida que `room` coincida con `author` y `name`, para evitar publicar en una sala que no corresponde.
-- El servidor emite `blueprint-update` hacia la sala del plano para aislar eventos entre planos diferentes.
-- En `blueprint-update` se envia el arreglo acumulado de puntos para simplificar el repintado en el front.
+---
 
-## Comparativa breve: Socket.IO vs STOMP (opcional)
 
-- Socket.IO:
-  - Ventaja: API simple para eventos personalizados (`emit/on`) y manejo directo de salas.
-  - Ventaja: buena experiencia para prototipos colaborativos con Node.
-  - Costo: acopla cliente/servidor al ecosistema Socket.IO.
-- STOMP (sobre WebSocket):
-  - Ventaja: modelo estandar de topicos y subscripciones (util cuando hay broker y multiples servicios).
-  - Ventaja: integra bien con stacks enterprise (por ejemplo Spring + broker).
-  - Costo: algo mas de complejidad operativa y de configuracion inicial.
+## Referencias
 
-## Evidencia
-
-### Captura 1
-
-![Evidencia 1](images/image.png)
-
-### Captura 2
-
-![Evidencia 2](images/image2.png)
-
-### Captura 3
-
-![Evidencia 3](images/image3.png)
+- [Terraform AzureRM Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
+- [Azure Load Balancer](https://learn.microsoft.com/azure/load-balancer/)
+- [Terraform Backend Azure](https://developer.hashicorp.com/terraform/language/settings/backends/azurerm)
+- [GitHub Actions OIDC con Azure](https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-azure)
