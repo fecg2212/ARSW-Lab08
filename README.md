@@ -39,14 +39,14 @@ Modernización del laboratorio de balanceo de carga en Azure usando **Terraform*
 ```mermaid
 graph LR
   Internet[Internet]
-  PIP[Public IP\n(lab8-lb-pip)]
-  LB[Azure Load Balancer\n(lab8-lb)]
-  VNet[Virtual Network\n(lab8-vnet)]
-  Subnet[Subnet\n(subnet-web)]
-  NSG[Network Security Group\n(lab8-nsg-web)]
-  VM0[VM: lab8-vm-0\n(Ubuntu + nginx)]
-  VM1[VM: lab8-vm-1\n(Ubuntu + nginx)]
-  Storage[Storage Account\n(tfstate)]
+  PIP["Public IP<br>(lab8-lb-pip)"]
+  LB["Azure Load Balancer<br>(lab8-lb)"]
+  VNet["Virtual Network<br>(lab8-vnet)"]
+  Subnet["Subnet<br>(subnet-web)"]
+  NSG["Network Security Group<br>(lab8-nsg-web)"]
+  VM0["VM: lab8-vm-0<br>(Ubuntu + nginx)"]
+  VM1["VM: lab8-vm-1<br>(Ubuntu + nginx)"]
+  Storage["Storage Account<br>(tfstate)"]
 
   Internet --> PIP --> LB
   LB -->|Backend pool| VM0
