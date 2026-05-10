@@ -36,11 +36,50 @@ Modernización del laboratorio de balanceo de carga en Azure usando **Terraform*
 
 ### Diagrama de Componentes
 
-<!-- TODO: Insertar diagrama de componentes aquí -->
+```mermaid
+graph LR
+  Internet[Internet]
+  PIP[Public IP\n(lab8-lb-pip)]
+  LB[Azure Load Balancer\n(lab8-lb)]
+  VNet[Virtual Network\n(lab8-vnet)]
+  Subnet[Subnet\n(subnet-web)]
+  NSG[Network Security Group\n(lab8-nsg-web)]
+  VM0[VM: lab8-vm-0\n(Ubuntu + nginx)]
+  VM1[VM: lab8-vm-1\n(Ubuntu + nginx)]
+  Storage[Storage Account\n(tfstate)]
+
+  Internet --> PIP --> LB
+  LB -->|Backend pool| VM0
+  LB -->|Backend pool| VM1
+  VM0 --> Subnet
+  VM1 --> Subnet
+  Subnet --> VNet
+  Subnet --> NSG
+  Storage -.->|Terraform remote state| LB
+```
+
+Explicación: El tráfico entrante desde Internet se enfrenta a la IP pública asociada al Load Balancer (`lab8-lb-pip`). El LB distribuye conexiones TCP/HTTP al `backend pool` compuesto por las VMs (`lab8-vm-0`, `lab8-vm-1`) ubicadas en la subred `subnet-web`. El `Network Security Group` aplica reglas mínimas: HTTP(80) desde Internet hacia el LB y SSH(22) solo desde la IP autorizada. El `Storage Account` aloja el estado remoto de Terraform (blob container) con locking.
 
 ### Diagrama de Secuencia
 
-<!-- TODO: Insertar diagrama de secuencia aquí -->
+```mermaid
+sequenceDiagram
+  participant User as Internet Client
+  participant LB as Azure Load Balancer
+  participant VM as VM (nginx)
+  participant Probe as LB Health Probe
+
+  User->>LB: HTTP GET /
+  LB->>VM: Forward TCP/HTTP to one backend VM
+  VM-->>LB: HTTP 200 + body ("Hola desde <hostname>")
+  LB-->>User: 200 OK (respuesta del VM)
+
+  Note over Probe,VM: Health probe ejecuta periodic checks
+  Probe->>VM: TCP/HTTP probe (puerto 80)
+  VM-->>Probe: 200 OK
+```
+
+Explicación: Un cliente hace peticiones a la IP pública del LB; el LB enruta la conexión a una de las VMs del backend pool. Cada VM atiende la petición con nginx y devuelve una página simple que incluye su `hostname`. El Load Balancer usa probes de salud periódicos para decidir la disponibilidad de cada VM y excluir temporalmente instancias no saludables del pool.
 
 ---
 
